@@ -1,0 +1,35 @@
+---
+title: "MATH4561 Mastery V"
+author: "Melissa Van Bussel"
+date: "April 20, 2019"
+output:
+  pdf_document:
+    highlight: zenburn
+    latex_engine: lualatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+library(knitr)
+library(kableExtra)
+```
+
+# Problem 1
+
+A study was conducted to determine the effects of individual bathers on the fecal
+and total coliform bacterial populations in water. The variables of interest were the time since the subject's last bath, the vigor of the subject's activity in the water, and the subject's sex. The experiments were perfomed in a 100-gallon polyethylene tub using dechlorinated tap water at 38 degrees Celsius. The bacterial contribution of each bather was determined by subtracting the bacterial concentration measured at 15 and 30 minutes from that measured initially. A replicated $2^3$ factorial design was used for
+this experiment. (Note: Because the measurement of bacterial populations in water involves a dilution technique, the experimental errors do not have constant variance. Rather, the variation increases with the value of the mean.) Perform analysis using a logarithmic
+transfomation of the data.
+
+The variables of interest are:
+* $x_1$: time since last bath, with levels 1-hour and 24-hours
+* $x_2$: vigor of bathing activity, with levels Lethargic and Vigorous
+* $x_3$: sex of bather, with levels Female and Male
+
+The response variable is:
+* $y_3$: Total coliform contribution after 15 minutes (organisms/100mL)
+
+(a) Briefly explain why this is a $2^3$ factorial design.
+
+(b) Calculate the factorial effects (main and interaction effects) on total coliform populations after 15 minutes. Interpret the main effect of $x_1$, and the interaction between $x_1$ and $x_3$. Ensure you model the logarithm of $y_3$.
+
