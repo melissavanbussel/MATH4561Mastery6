@@ -22,14 +22,97 @@ this experiment. (Note: Because the measurement of bacterial populations in wate
 transfomation of the data.
 
 The variables of interest are:
-* $x_1$: time since last bath, with levels 1-hour and 24-hours
-* $x_2$: vigor of bathing activity, with levels Lethargic and Vigorous
-* $x_3$: sex of bather, with levels Female and Male
+
+- $x_1$: time since last bath, with levels 1-hour and 24-hours
+- $x_2$: vigor of bathing activity, with levels Lethargic and Vigorous
+- $x_3$: sex of bather, with levels Female and Male
 
 The response variable is:
-* $y_3$: Total coliform contribution after 15 minutes (organisms/100mL)
+
+- $y_3$: Total coliform contribution after 15 minutes (organisms/100mL)
 
 (a) Briefly explain why this is a $2^3$ factorial design.
 
 (b) Calculate the factorial effects (main and interaction effects) on total coliform populations after 15 minutes. Interpret the main effect of $x_1$, and the interaction between $x_1$ and $x_3$. Ensure you model the logarithm of $y_3$.
 
+```{r}
+prb0506 <- read.table(file = "prb0506.dat",header = T)
+```
+
+# Problem 1: Solution
+
+## 1 (a)
+
+This is referred to as a $2^3$ factorial design because we have 3 factors, each of which have two levels. The first factor is time since last bath (levels: 1 hour or 24 hours), the second factor is vigor of bathing activity (levels: lethargic or vigorous), and the third factor is sex of bather (levels: male or female). The number of treatment combinations is $2^3 = 8$, which is where the name comes from. 
+
+## 1 (b)
+
+To estimate the effects, we can use the `lm` function.
+
+```{r}
+bath <- as.factor(prb0506$x1)
+vigor <- as.factor(prb0506$x2)
+sex <- as.factor(prb0506$x3)
+response <- log(prb0506$y3)
+coliform <- data.frame(bath, vigor, sex, response)
+mod <- lm(response ~ bath*vigor*sex, data = coliform)
+summary(mod)
+```
+
+The "effects" are simply the coefficients of the terms in the model. From the summary output, we can see which effects are significant. However, a more visual representation can also help with the interpretation. Recall that if all coefficients are insignificant, then they should come from a Normal distribution with mean 0 due to the Central Limit Theorem. Therefore, by creating a Normal Q-Q plot, we can see which effects and interactions are significant. Coefficients which fall along the straight line are insignificant (come from a Normal Distribution), and outliers are significant (do not come from a Normal Distribution). 
+
+```{r}
+library(daewr)
+fullnormal(coef(mod)[-1], alpha=.025)
+```
+
+We can see from the plot that many of the points deviate from the line, indicating significant effects. The only terms which are insignifcant are the interaction terms `bath*sex`, `vigor*sex` and `bath*vigor*sex`. 
+
+We can further visualize the interaction effects by using interaction plots. For this question, we are interested in the interaction between `bath` and `sex`: 
+
+```{r}
+with(coliform, (interaction.plot(bath, sex, response, type = "b", pch =
+c(18,24), main = "Interaction Plot",
+xlab = "bath", ylab = "Total coliform after 15 minutes")))
+```
+
+From this interaction plot, we observe that there is no significant interaction, since the lines are approximately parallel. This tells us that, on average, changing the experimental unit from a man to a woman has a similar effect on the response (total coliform after 15 minutes) when the experimental unit has bathed an hour ago compared to when they bathed 24 hours ago. Changing the level of the `sex` variable does not change the effect that the `bath` variable has on the response, and vice versa.  
+
+However, since we are also interested in the `bath` variable for this question, we need to consider any terms in the model which involve this variable, including interaction terms. If there are significant interaction terms which involve the `bath` variable, then the coefficient on the `bath` variable cannot be interpreted separately / on its own. 
+
+Recall that the `bath*vigor` interaction term was significant in our model. Thus, we cannot directly interpret the `bath` variable's coefficient without considering other terms. We can, however, take a look at the coefficient of the `bath` variable and make a more general statement about it. First, we need to know which level of this factor had a higher average response. 
+
+```{r}
+bath_neg <- mean(subset(coliform, bath == -1, select = response)$response)
+bath_pos <- mean(subset(coliform, bath == 1, select = response)$response)
+bath_neg
+bath_pos
+```
+
+We can see that the mean coliform level is higher for `bath = 1`. We aren't told whether `bath = 1` corresponds to 1 hour or 24 hours, but it seems reasonable to assume that bathing more recently would correspond to less bacteria, so let's make the assumption (for the purpose of answering this question) that `bath = 1` corresponds to having taken a bath 24 hours ago, while `bath = -1` corresponds to having taken a bath 1 hour ago. 
+
+```{r, echo=FALSE}
+coeff <- mod$coefficients[2]
+```
+
+**If we pretend for a moment that there was no significant interaction term involving the `bath` variable, we would interpret this coefficient in the following way:** if the other factors are kept constant (vigor and sex), then changing the `bath` variable from `-1` to `1` will increase the log total coliform contribution after 15 minutes by an average of `r coeff`. For example, if we were to take a measurement of the total coliform after 15 minutes from a man doing vigorous exercise who bathed an hour ago (and take the log of the measurement), and then repeat the experiment but have the man not shower for 24 hours beforehand, then we would expect the measurement of total coliform after 15 minutes to increase by roughly $e^{3.138322}$. However, this is a very small increase, and is essentially negligible, as this factor was found to be insignificant. While this factor does have *some* effect on the total coliform measurement (since the coefficient is not 0), the effect is so small that it is not worth including in our final model. We always desire the simplest model possible (the parsimonious model), so we do not include variables which are found to be insignificant. 
+
+**However**, there is a significant interaction term involving the `bath` variable, so we cannot interpret the coefficient directly like that. Rather, we can interpret the coefficient as being significant, meaning that, on average, experimental units who bathe 24 hours ago will affect / increase the response more than those who bathed an hour ago. We can't directly interpret the value of the coefficient itself, though, because we'd need to take other terms in the model into consideration.
+
+# Problem 2 
+
+Le Riche and Csima (1964) evaluated four hypnotic drugs and a placebo to determine
+their effect on the quality of sleep in elderly patients. The treatment levels were labeled (A = Placebo, B = Ethchlorvynol, C = Glutethimide, D = Chloral hydrate, and E = Secobarbitol sodium). Elderly patients were given one of the capsules for five nights in succession and their quality of sleep was rated by a trained nurse on a 4-point scale (0 = poor to 3 = excellent) each night. An average score was calculated for each patient over the five nights in a week. Each patient received all five treatments in successive weeks. A Latin-square design was used to account for patient-to-patient differences and week-to-week effects. The design and the response (mean quality of sleep rating) are shown in the table attached.
+
+| Patient | 1        | 2        | 3        | 4        | 5        |
+| :------ | :------- | :------- | :------- | :------- | :------- |
+| 1       | B (2.92) | E (2.43) | A (2.19) | C (2.71) | D (2.71) |
+| 2       | D (2.86) | A (1.64) | E (3.02) | B (3.03) | C (3.03) |
+| 3       | E (1.97) | B (2.50) | C (2.47) | D (2.65) | A (1.89) |
+| 4       | A (1.99) | C (2.39) | D (2.37) | E (2.33) | B (2.71) |
+| 5       | C (2.64) | D (2.31) | B (2.44) | A (1.89) | E (2.78) |
+
+
+# Problem 2: Solution
+
+In this situation, we are treating each patient as a block, and we are using a Latin Square Design to randomly assign the treatment order of the 5 treatments in each "block". 
