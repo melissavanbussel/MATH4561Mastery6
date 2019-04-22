@@ -257,6 +257,250 @@ kable(catapult, "latex", booktabs = TRUE) %>%
   kable_styling(latex_options = "striped")
 ```
 
+# Problem 4 
+
+Professor Robert Wardrop, of the University of Wisconsin, conducted an experiment in 1991 to evaluate in which of five sound modes he best played a certain video game. The first three sound modes corresponded to three different types of background music, as well as game sounds expected to enhance play. The fourth mode had game sounds but no background music. The fifth mode had no music or game sounds. Denote these sound modes by the treatment factor levels 1-5, respectively. The experimenter observed that the game required no warmup, that boredom and fatigue would be a factor after 4 to 6 games, and that his performance varied considerably on a day-to-day basis. Hence, he used a Latin square design, with the two blocking factors being "day" and "time order of the game." The response measured was the game score, with higher scores being better. The design and resulting data are given in the attached table.
+
+(a) Write down a possible model for these data and check the model assumptions. If the assumptions appear to be approximately satisfied, then answer parts (b)-(f).
+
+(b) Plot the adjusted data and discuss the plot.
+
+(c) Complete an analysis of variance table.
+
+(d) Evaluate whether blocking was effective.
+
+(e) Construct simultaneous 95% confidence intervals for all pairwise comparisons, as well as the "music versus no music" contrast: 
+
+$$
+\frac{1}{3}(\tau_1 + \tau_2 + \tau_3) - \frac{1}{2}(\tau_4 + \tau_5)
+$$
+
+and the "game sound versus no game sound" contrast:
+
+$$
+\frac{1}{4}(\tau_1 + \tau_2 + \tau_3 + \tau_4) - \tau_5
+$$
+
+(f) What are your conclusions from this experiment? Which sound mode(s) should Professor
+Wardrop use?
+
+# Problem 4: Solution 
+
+## 4 (a)
+
+### Model 
+
+We are using a Latin Square design, with the row blocking factor the time order, and the column blocking factor the day. The treatment has 5 levels (music / game sounds, as described in the question). Our model is: 
+
+$$
+y_{ijk} = r_i + c_j + \tau_k + \epsilon_{ijk}
+$$
+where $r_i, \; i =1,2,3,4,5$ is the row block effect, $c_j, \; j=1,2,3,4,5$ is the column block effect, and $\tau_k, \;, k=1,2,3,4,5$ is the treatment effect. The final term in the model is for the experimental error. 
+
+### Assumptions of the Model 
+
+Before we can check the assumptions of the model, we must import the data.
+
+```{r}
+r1t <- c(1, 3, 4, 2, 5)
+r2t <- c(3, 2, 1, 5, 4)
+r3t <- c(4, 1, 5, 3, 2)
+r4t <- c(5, 4, 2, 1, 3)
+r5t <- c(2, 5, 3, 4, 1)
+treatment <- as.factor(c(r1t, r2t, r3t, r4t, r5t))
+r1r <- c(94, 100, 98, 101, 112)
+r2r <- c(103, 111, 51, 110, 90)
+r3r <- c(114, 75, 94, 85, 107)
+r4r <- c(100, 74, 70, 93, 106)
+r5r <- c(106, 95, 81, 90, 73)
+response <- c(r1r, r2r, r3r, r4r, r5r)
+day <- as.factor(rep(1:5, 5)) 
+order <- as.factor(rep(1:5, each = 5))
+game <- data.frame(day, order, treatment, response)
+head(game)
+```
+
+Next, we fit the model: 
+
+```{r}
+mod <- aov(response ~ order + day + treatment, data = game)
+summary(mod)
+```
+
+I'm pretty sure we didn't really talk about how to verify assumptions in class for the specific case of a latin square design, so I found a resource online that explains some tests that can be used (available at http://www.unh.edu/halelab/BIOL933/Labs/Lab5.pdf); latin squares are different than some of the other ones we covered in this course, since we need to ensure that the additive model works and we do not need interaction terms!
+
+To check the assumption that errors are normally distributed, we plot a Normal Q-Q plot: 
+
+```{r}
+plot(mod, which = 2)
+```
+
+Since the points fall roughly on the straight line (appears that there is maybe one outlier at the bottom left), we are not concerned about this assumption not being met. 
+
+Furthermore, we can plot the residuals and predicted values:
+
+```{r}
+resids <- residuals(mod)
+preds <- predict(mod)
+plot(resids ~ preds,
+ xlab = "Predicted Values",
+ ylab = "Residuals") 
+```
+
+There doesn't really appear to be any kind of pattern / trend, so we are not worried about this assumption not being met.
+
+Finally, we can use the Shapiro-Wilk test to quantify the results we saw from the above plots.
+
+```{r}
+shapiro.test(resids)
+```
+
+Since the p-value is large, we fail to reject the null hypothesis. For the Shapiro-Wilk test, the null hypothesis is that the observations come from a Normal distribution. Therefore, we do not have significant evidence that the experimental errors are non-Normally distributed.
+
+To verify the assumption that variances are homogeneous amongst treatment levels, we can perform Levene's Test: 
+
+```{r}
+library(car)
+leveneTest(response ~ treatment, data = game)
+```
+
+Since the p-value is large, we fail to reject the null hypothesis (which is that the variances are homogeneous amongst treatment levels). Therefore, we do not have significant evidence that this assumption is not met. 
+
+For a latin square design, we have an additive model. We therefore assume that the two blocking factors do not interact with each other, or with the treatment. We need to verify these assumptions, which we can do by using the Tukey 1-df test for Non-additivity (the following methodology is taken from the online resource I mentioned).
+
+```{r}
+# Testing for significance of the Row*Col interaction
+row_column_mod <- lm(response ~ order + day, data = game)
+row_column_preds <- predict(row_column_mod)
+row_column_sqpreds <- row_column_preds^2
+row_column_Tukey_mod <- lm(response ~ order + day + row_column_sqpreds, data = game)
+anova(row_column_Tukey_mod)
+
+# Testing for significance of the Treatment*Col interaction
+trt_column_mod <- lm(response ~ treatment + day, data = game)
+trt_column_preds <- predict(trt_column_mod)
+trt_column_sqpreds <- trt_column_preds^2
+trt_column_Tukey_mod <- lm(response ~ order + day + trt_column_sqpreds, data = game)
+anova(trt_column_Tukey_mod)
+
+# Testing for significance of the Row*Treatment interaction
+row_trt_mod <- lm(response ~ order + treatment, data = game)
+row_trt_preds <- predict(row_trt_mod)
+row_trt_sqpreds <- row_trt_preds^2
+row_trt_Tukey_mod <- lm(response ~ order + day + row_trt_sqpreds, data = game)
+anova(row_trt_Tukey_mod)
+```
+
+Well, according to the resource I found online, the null hypothesis for the Tukey 1-df Non-additivity test is that there is no significant interaction. The p-value of interest for the test is the one in the bottomn right-hand corner. We can see that in 2 out of 3 of these tests, we have significant p-values (at varying significance levels), so we have significant evidence that there are some interactions. In particular, we see that the `treatment*day` and `treatment*order` interactions are significant. This means that the assumption of the latin square design (additive model) is actually *NOT* met. 
+
+(I noticed afterwards that the `daewr` package actually has a function that does this, too. It's called `Tukey1df`.)
+
+We can further explore this idea by using interaction plots, though these will be a bit difficult to interpret since there are 5 levels per factor. 
+
+```{r}
+with(game, (interaction.plot(order, day, response, type = "b", pch =
+c(18,24), main = "Row*Column Interacton Plot",
+xlab = "order", ylab = "Game Score")))
+with(game, (interaction.plot(treatment, day, response, type = "b", pch =
+c(18,24), main = "Treatment*Column Interacton Plot",
+xlab = "treatment", ylab = "Game Score")))
+with(game, (interaction.plot(order, treatment, response, type = "b", pch =
+c(18,24), main = "Row*Treatment Interacton Plot",
+xlab = "order", ylab = "Game Score")))
+```
+
+We can see that there is quite a lot of overlapping on all of the interaction plots, further confirming our suspicions that the assumptions of the model may not have been met. 
+However, just in case I'm supposed to answer the question anyways / in case I verified the assumptions incorrectly, I will proceed.
+
+## 4 (b)
+
+We never talked about "adjusted data" in this course so I'll just assume that we are being asked to plot the response values along with the fitted values from the model. 
+
+```{r}
+plot(game$response, type = "l", ylim = c(10, 150), 
+     main = "Game Sound Experiment",
+     ylab = "Game Score")
+lines(mod$fitted.values, type = "l", col = "red")
+legend("topright",
+       legend = c("response", "fitted"),
+       col = c("black", "red"),
+       lty = c(1, 1))
+```
+
+We can see that the fit is pretty good, but there area few spots where the model doesn't quite line up with the response. Some of the peaks and troughs do not match up, and there is a noticeable difference between the two lines. This might suggest that the fit is not very "good" -- in other words, the terms in the model may not be significant. In fact, if we recall the fit from earlier, not all three of the effects in the model were found to be significant. 
+
+We can also do boxplots by factor: 
+
+```{r}
+boxplot(response ~ treatment, data = game)
+```
+
+We see from the boxplot that there appears to be a significant difference between some of the various treatment levels on Professor Wardrop's game score. 
+
+It is also useful to look at boxplots of the response by the row blocking factor and column blocking factor. 
+
+```{r}
+boxplot(response ~ order, data = game)
+boxplot(response ~ day, data = game)
+```
+
+Here, we don't see a significant difference between the game scores for the varying levels of the row blocking factor. For the column blocking factor, it is a much closer call, but it still doesn't look like there are significant differences between the game scores for the varying levels.
+
+## 4 (c)
+
+We have already outputted the ANOVA table; it is re-outputted here for convenience:
+
+```{r}
+summary(mod)
+```
+
+There are no significant effects in the model at significance level $\alpha = 0.05$, however, the `treatment` effect and the `day` effect are significant at the $\alpha = 0.10$ level. 
+
+## 4 (d)
+
+Blocking was only somewhat effective in this case. As there were no significant differences between levels of the row blocking factor, all that occurred by including this block in the model was unnecessary overcomplication of the model. Since this blocking factor did not actually add useful information to the model, it should not be included. The column blocking factor was a bit more significant, but still did not add a ton of value to the model. With this being said, however, since the interaction terms are being omitted (and since we found that there are actually significant interactions), it's possible that blocking would have been effective if some or all of the interaction terms were included. It is not possible to tell if this is the case, however, because there are not enough degrees of freedom to fit the model with all interaction terms.  
+
+## 4 (e) 
+
+To compute simultaneous 95% confidence intervals for pairwise comparisons, we use the `TukeyHSD` function (which defaults to a confidence level of 0.95): 
+
+```{r}
+TukeyHSD(mod, which = "treatment")
+```
+
+We can see that the only pairwise comparison which came back significant at the $\alpha = 0.05$ level is sound mode 5 compared to sound mode 1. We weren't given full details about the sound modes, but we do know that sound mode 5 corresponded to no game sounds with no music, while sound mode 1 corresponded to game sounds with music. Sound mode 5 was preferred over sound mode 1 in terms of increasing the professor's score. Perhaps in sound mode 1, the professor was becoming distracted by the music / sounds he was listening to. 
+
+Aside from this one pair, we do not have evidence to suggest that any one treatment is better than any other in terms of improving the Professor's game score. This is basically what we would have expected, from our boxplots earlier. 
+
+The 95% confidence intervals are given by the (lwr, upr) values in the output from the `TukeyHSD` function. The significant combination (sound mode 5 compared to sound mode 1) has a confidence interval which does not overlap 0, indicating its significance. Since all of the remaining intervals overlap 0, none of the remaining pairwise combinations have significant differences. 
+
+Next, we are asked to compute the "music versus no music" contrast and the "game sound versus no game sound" contrast. 
+
+First, we check orthogonality: 
+
+```{r}
+con1 <- c(1/3, 1/3, 1/3, -1/2, -1/2)
+con2 <- c(1/4, 1/4, 1/4, 1/4, -1)
+con1 %*% con2
+```
+
+We can see that the two contrasts are *not* orthogonal. For the purpose of completing the question, we continue as if they are. 
+
+```{r}
+fit.contrast(mod, "treatment", con1)
+fit.contrast(mod, "treatment", con2)
+```
+
+For both contrasts, we have insignificant results (at significance level $\alpha = 0.05$). We see that the "game sound vs. no game sound" effect is significant at $\alpha = 0.10$, and that no game music is preferred. Thus, we do not have significant evidence to conclude that there is any difference in the Professor's game scores if he listens to music or not, but turning off his game sounds could increase his score (though we aren't really sure of this since the model assumptions were not met).
+
+## 4 (f)
+
+My conclusions are that the assumptions are not met, so the model is not really interpretable. The experiment should be re-run, with more data collected. Currently, there are not enough degrees of freedom to use other models, so it would be helpful to re-run the model, and determine which terms should be included in the model. 
+
+Personally, I think that listening to game sounds should have a larger effect on a player's score (depending on the game obviously). This is because game sounds are there to allow the player to multitask most efficiently: having game sounds can tell the player valuable information about the game without the player needing to move their eyes around the screen as much and get distracted. I would actually think that game sounds should *increase* the player's score, not decrease it, but we aren't told what game it is, so who knows. 
+
+From the results of this experiment alone, we cannot really provide recommendations to the Professor about which sound mode(s) he should use, since the model assumptions were not met. If the assumptions *were* met, we would recommend that he play this game with no game sounds, and that he listens to whichever background music he had for treatment level 1.
+
 # Problem 6 
 
 In an experiment to maximize the $Y$ = resolution of a peak on a gas chromatograph,
@@ -299,3 +543,4 @@ xlab = "temp", ylab = "Mean Resolution")))
 We can see that there is a significant interaction between the `temp` and `flow` variables, since the slopes are not parallel. From the interaction plot, it can be observed that when the gas flow rate is low, changing the column temperature from 120 to 180 causes a small increase (2 units) in the mean resolution of the peak; however, when the gas flow rate is high, changing the column temperature from 120 to 180 causes a much larger increase (5 units) in the mean resolution of the peak on the chromatograph. 
 
 I don't really remember everything from physics, but I'm pretty sure that having higher resolution is a good thing, because it's easier to detect where the actual peak is (?). If that's the case, then we can use this interaction plot to recommend that the scientists use a high gas flow rate and high column temperature (if these were the only two variables at play). A quick Google search reveals that it is indeed recommended to use a high gas flow rate / high temperature to improve resolution in gas chromatography experiments.
+
