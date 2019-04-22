@@ -112,7 +112,114 @@ their effect on the quality of sleep in elderly patients. The treatment levels w
 | 4       | A (1.99) | C (2.39) | D (2.37) | E (2.33) | B (2.71) |
 | 5       | C (2.64) | D (2.31) | B (2.44) | A (1.89) | E (2.78) |
 
+(a) What is the appropriate model for this data?
+
+(b) Complete the ANOVA and determine if there are any significant differences among the treatments.
+
+(c) Use an appropriate method to determine if there is a significant difference between the placebo and the average of the other drugs, and if there are significant differences among the four drugs.
 
 # Problem 2: Solution
 
-In this situation, we are treating each patient as a block, and we are using a Latin Square Design to randomly assign the treatment order of the 5 treatments in each "block". 
+## 2 (a)
+
+In this situation, we are treating each patient as a block, and we are using a Latin Square Design to randomly assign the treatment order of the 5 treatments in each "block". Our column blocking factor is time, while our row blocking factor is the patient. Our 5 treatment levels are A = Placebo, B = Ethchlorvynol, C = Glutethimide, D = Chloral hydrate, and E = Secobarbitol sodium. Therefore, our model is: 
+
+$$
+y_{ijk} = r_i + c_j + \tau_k + \epsilon_{ijk}
+$$
+
+where $r_i, \; i = 1,2,3,4,5$ is the row blocking effect, $c_j, \; j = 1,2,3,4,5$ is the column-blocking effect, $\tau_k, \; k=1,2,3,4,5$ is the treatment effect, and $\epsilon_{ijk}$ is the experimental error term. 
+
+## 2 (b)
+
+First, we import the data. 
+
+| Patient | 1        | 2        | 3        | 4        | 5        |
+| :------ | :------- | :------- | :------- | :------- | :------- |
+| 1       | B (2.92) | E (2.43) | A (2.19) | C (2.71) | D (2.71) |
+| 2       | D (2.86) | A (1.64) | E (3.02) | B (3.03) | C (3.03) |
+| 3       | E (1.97) | B (2.50) | C (2.47) | D (2.65) | A (1.89) |
+| 4       | A (1.99) | C (2.39) | D (2.37) | E (2.33) | B (2.71) |
+| 5       | C (2.64) | D (2.31) | B (2.44) | A (1.89) | E (2.78) |
+
+```{r}
+patient <- as.factor(rep(1:5, each = 5))
+week <- as.factor(rep(1:5, 5))
+p1t <- c("B", "E", "A", "C", "D") # patient 1 treatment order
+p2t <- c("D", "A", "E", "B", "C")
+p3t <- c("E", "B", "C", "D", "A")
+p4t <- c("A", "C", "D", "E", "B")
+p5t <- c("C", "D", "B", "A", "E")
+treatment <- as.factor(c(p1t, p2t, p3t, p4t, p5t))
+p1r <- c(2.92, 2.43, 2.19, 2.71, 2.71) # patient 1 response
+p2r <- c(2.86, 1.64, 3.02, 3.03, 3.03)
+p3r <- c(1.97, 2.50, 2.47, 2.65, 1.89)
+p4r <- c(1.99, 2.39, 2.37, 2.33, 2.71)
+p5r <- c(2.64, 2.31, 2.44, 1.89, 2.78)
+response <- c(p1r, p2r, p3r, p4r, p5r)
+sleep <- data.frame(patient, week, treatment, response)
+head(sleep)
+```
+
+Now, we can get the ANOVA table: 
+
+```{r}
+mod <- aov(response ~ patient + week + treatment)
+summary(mod)
+```
+
+We can see from the summary of the model that the `treatment` variable is significant at significance level $\alpha = 0.001$. Therefore, we have strong evidence that there are some differences between the different treatment levels. 
+
+## 2 (c)
+
+To determine if there is a significant difference between the placebo and the average of the other drugs, we can use the following contrast: $\tau_1 - \frac{1}{4}(\tau_2 + \tau_3 + \tau_4 + \tau_5)$. We can also use boxplots to visualize the data. 
+
+```{r}
+con1 <- c(1, -1/4, -1/4, -1/4, -1/4)
+library(gmodels)
+fit.contrast(mod, "treatment", con1)
+boxplot(response ~ treatment, data = sleep)
+```
+
+From both the `fit.contrast` output and the boxplots, we can see that there is a significant difference in sleep quality between the placebo and the average of the other treatments. In fact, the other treatments significantly increase the patient's quality of sleep. 
+
+To determine if there are significant differences between the four drugs, we will have to use the Tukey Honestly Significant Differences methods. If we were only comparing a couple of the drugs, we would be able to continue using contrats; however, if we were to do all of the pairwise combinations, we would quickly run into orthogonality issues. This is demonstrated below: 
+
+```{r}
+con2 <- c(0, 1, -1, 0, 0)
+con3 <- c(0, 1, 0, -1, 0)
+con4 <- c(0, 1, 0, 0, -1)
+con5 <- c(0, 0, 1, -1, 0)
+con6 <- c(0, 0, 1, 0, -1)
+con7 <- c(0, 0, 0, 1, -1)
+(con1 %*% con2)[1, 1]
+(con1 %*% con3)[1, 1] 
+(con1 %*% con4)[1, 1]
+(con1 %*% con5)[1, 1] 
+(con1 %*% con6)[1, 1]
+(con1 %*% con7)[1, 1]
+(con2 %*% con3)[1, 1]
+(con2 %*% con4)[1, 1] 
+(con2 %*% con5)[1, 1] 
+(con2 %*% con6)[1, 1] 
+(con2 %*% con7)[1, 1] 
+(con3 %*% con4)[1, 1] 
+(con3 %*% con5)[1, 1] 
+(con3 %*% con6)[1, 1] 
+(con3 %*% con6)[1, 1] 
+(con4 %*% con5)[1, 1] 
+(con4 %*% con6)[1, 1] 
+(con4 %*% con7)[1, 1]
+(con5 %*% con6)[1, 1] 
+(con5 %*% con7)[1, 1]
+(con6 %*% con7)[1, 1]
+```
+
+So, instead, we use the `TukeyHSD` function. 
+
+```{r}
+TukeyHSD(mod, which = "treatment")
+```
+
+From this, we can see that there is a significant difference in sleep quality between the placebo and each of the other treatments. There is no significant difference in sleep quality between any pairs of the drugs. Thus, so long as a patient takes one of the hypnotic drugs (doesn't matter which one), they should, on average, see an increase in their sleep quality. 
+
