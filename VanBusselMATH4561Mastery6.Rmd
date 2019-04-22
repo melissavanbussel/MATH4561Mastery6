@@ -1,5 +1,5 @@
 ---
-title: "MATH4561 Mastery V"
+title: "MATH4561 Mastery VI"
 author: "Melissa Van Bussel"
 date: "April 20, 2019"
 output:
@@ -222,4 +222,40 @@ TukeyHSD(mod, which = "treatment")
 ```
 
 From this, we can see that there is a significant difference in sleep quality between the placebo and each of the other treatments. There is no significant difference in sleep quality between any pairs of the drugs. Thus, so long as a patient takes one of the hypnotic drugs (doesn't matter which one), they should, on average, see an increase in their sleep quality. 
+
+# Problem 3
+
+A wooden catapult can be used to flip a foam ball. The catapult has three factors that can be adjusted: the start angle, the stop angle, and the pivot height. The distance the ball travels can be measured with a tape measure.
+
+(a) If experiments were to be conducted with the catapult by flipping the ball and measuring the distance, what would the experimental unit be?
+
+(b) Using the numbers 1, 2, and 3 to represent the levels of start angle and stop angle, and holding the pivot height constant at its high level, make a randomized list of experiments for a 3 X 3 factorial experiment with $r = 2$ replicates per cell.
+
+# Problem 3: Solution
+
+## 3 (a) 
+
+**Recall, from Lawson**: *Experimental Unit* is the item under study upon which something is changed.
+
+In our case, the item under study / the experimental unit is the distance of the catapulted ball, given the start angle, stop angle, and pivot height. 
+
+## 3 (b) 
+
+We are told to keep the pivot height constant, so we are only really varying two factors, each with 3 levels. Thus, we have a 3 x 3 factorial design. We need to use the `expand.grid` function on two vectors which each contain 3 levels, and then we can combine these results with a constant pivot height and a randomized order to obtain our final randomization plan.  
+
+```{r}
+start <- 1:3
+stop <- 1:3 
+combos <- expand.grid(start, stop)
+start <- rep(combos$Var1, 2) 
+stop <- rep(combos$Var2, 2)
+replicate <- rep(1:2, each = 9)
+pivot <- rep(3, 18)
+order <- sample(1:18, 18, replace = FALSE)
+catapult <- data.frame(start, stop, pivot, replicate, order)
+kable(catapult, "latex", booktabs = TRUE) %>%
+  kable_styling(latex_options = "striped")
+```
+
+
 
